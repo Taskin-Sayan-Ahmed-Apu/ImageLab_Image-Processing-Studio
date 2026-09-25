@@ -1,0 +1,22 @@
+{
+  "appName": "ImageLab",
+  "version": "1.0.0",
+  "defaults": {
+    "logC": 30.0,
+    "gamma": 0.5,
+    "brightnessDelta": 30,
+    "contrastFactor": 1.5,
+    "bitPlane": 7,
+    "meanKernel": 3,
+    "medianKernel": 3,
+    "highBoostA": 1.5,
+    "piecewise": { "r1": 80, "s1": 40, "r2": 180, "s2": 220 }
+  },
+  "api": {
+    "randomImageEndpoint": "https://dog.ceo/api/breeds/image/random",
+    "timeoutSeconds": 15
+  },
+  "database": {
+    "url": "jdbc:sqlite:imagelab.db"
+  }
+}

@@ -1,5 +1,7 @@
 package com.imagelab.data;
 
+import com.imagelab.util.Log;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,8 +36,9 @@ public class DatabaseManager {
                     created_at TEXT
                 )
             """);
+            Log.success("SQLite ready  →  " + url);
         } catch (SQLException e) {
-            System.err.println("DB init failed: " + e.getMessage());
+            Log.error("DB init failed: " + e.getMessage());
         }
     }
 
@@ -49,7 +52,7 @@ public class DatabaseManager {
             ps.setString(4, h.getDetails());
             ps.executeUpdate();
         } catch (SQLException e) {
-            System.err.println("DB insert failed: " + e.getMessage());
+            Log.error("DB insert failed: " + e.getMessage());
         }
     }
 
@@ -68,7 +71,7 @@ public class DatabaseManager {
                 list.add(h);
             }
         } catch (SQLException e) {
-            System.err.println("DB read failed: " + e.getMessage());
+            Log.error("DB read failed: " + e.getMessage());
         }
         return list;
     }
@@ -77,8 +80,9 @@ public class DatabaseManager {
         try (Connection conn = DriverManager.getConnection(url);
              Statement st = conn.createStatement()) {
             st.executeUpdate("DELETE FROM history");
+            Log.warn("History cleared");
         } catch (SQLException e) {
-            System.err.println("DB clear failed: " + e.getMessage());
+            Log.error("DB clear failed: " + e.getMessage());
         }
     }
 
@@ -93,7 +97,7 @@ public class DatabaseManager {
             ps.setString(5, java.time.LocalDateTime.now().toString());
             ps.executeUpdate();
         } catch (SQLException e) {
-            System.err.println("DB metadata insert failed: " + e.getMessage());
+            Log.error("DB metadata insert failed: " + e.getMessage());
         }
     }
 }

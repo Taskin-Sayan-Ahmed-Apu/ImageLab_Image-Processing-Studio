@@ -424,4 +424,72 @@ public final class ImageOps {
         }
         return out;
     }
+
+    // ============================================================
+    //                NEW — GEOMETRIC TRANSFORMS
+    // ============================================================
+
+    /** Rotate 90° clockwise (right). */
+    public static BufferedImage rotate90Right(BufferedImage src) {
+        int w = src.getWidth(), h = src.getHeight();
+        BufferedImage out = new BufferedImage(h, w, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                out.setRGB(h - 1 - y, x, src.getRGB(x, y));
+        return out;
+    }
+
+    /** Rotate 90° counter-clockwise (left). */
+    public static BufferedImage rotate90Left(BufferedImage src) {
+        int w = src.getWidth(), h = src.getHeight();
+        BufferedImage out = new BufferedImage(h, w, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                out.setRGB(y, w - 1 - x, src.getRGB(x, y));
+        return out;
+    }
+
+    /** Rotate 180° (upside down). */
+    public static BufferedImage rotate180(BufferedImage src) {
+        int w = src.getWidth(), h = src.getHeight();
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                out.setRGB(w - 1 - x, h - 1 - y, src.getRGB(x, y));
+        return out;
+    }
+
+    /** Mirror left ↔ right (horizontal flip). */
+    public static BufferedImage mirrorHorizontal(BufferedImage src) {
+        int w = src.getWidth(), h = src.getHeight();
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                out.setRGB(w - 1 - x, y, src.getRGB(x, y));
+        return out;
+    }
+
+    /** Mirror top ↔ bottom (vertical flip). */
+    public static BufferedImage mirrorVertical(BufferedImage src) {
+        int w = src.getWidth(), h = src.getHeight();
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+                out.setRGB(x, h - 1 - y, src.getRGB(x, y));
+        return out;
+    }
+
+    /** Crop a rectangular region; coordinates are clamped to image bounds. */
+    public static BufferedImage crop(BufferedImage src, int x, int y, int cw, int ch) {
+        int sw = src.getWidth(), sh = src.getHeight();
+        x  = Math.max(0, Math.min(x, sw - 1));
+        y  = Math.max(0, Math.min(y, sh - 1));
+        cw = Math.max(1, Math.min(cw, sw - x));
+        ch = Math.max(1, Math.min(ch, sh - y));
+        BufferedImage out = new BufferedImage(cw, ch, BufferedImage.TYPE_INT_RGB);
+        for (int j = 0; j < ch; j++)
+            for (int i = 0; i < cw; i++)
+                out.setRGB(i, j, src.getRGB(x + i, y + j));
+        return out;
+    }
 }

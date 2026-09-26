@@ -1,7 +1,10 @@
 package com.imagelab.ui;
 
 import com.imagelab.util.Log;
-import javafx.animation.*;
+import javafx.animation.AnimationTimer;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -14,24 +17,33 @@ import javafx.util.Duration;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * In-app, fully colourful console panel — pure BLACK background,
- * animated spinner in the header, and a live loading progress bar
- * that can be shown/hidden while the app is processing.
+ * Lightweight, batched console panel.
+ * Log calls enqueue messages; an AnimationTimer flushes them to the UI
+ * at most once per frame so the FX thread never gets flooded.
  */
 public class ConsolePanel extends BorderPane {
 
-    private static final int MAX_ROWS = 500;
+    private static final int MAX_ROWS = 200;
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     private final VBox messages = new VBox(2);
     private final ScrollPane scroll = new ScrollPane(messages);
     private final Label spinner = new Label("●");
     private final ProgressBar loadingBar = new ProgressBar(0);
-    private final Label loadingLabel = new Label("Ready");
+    private final Label loadingLabel = new Label("");
 
-    private Timeline spinnerTimeline;
+    // Batch queue + flush timer
+    private final ConcurrentLinkedQueue<Runnable> pending = new ConcurrentLinkedQueue<>();
+    private long lastFlush = 0;
+    private static final long FLUSH_INTERVAL_NS = 33_000_000L; // ~30 fps
+
+    // Track whether the user is glued to the bottom
+    private boolean userAtBottom = true;
 
     public ConsolePanel() {
         getStyleClass().add("console-panel");
@@ -53,7 +65,6 @@ public class ConsolePanel extends BorderPane {
         loadingBar.setManaged(false);
 
         loadingLabel.getStyleClass().add("console-loading-label");
-        loadingLabel.setText("");
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -75,49 +86,91 @@ public class ConsolePanel extends BorderPane {
         setTop(header);
         setCenter(scroll);
 
-        messages.heightProperty().addListener((o, ov, nv) ->
-                Platform.runLater(() -> scroll.setVvalue(1.0)));
+        // Smart auto-scroll: only stick to bottom if user is already there
+        scroll.vvalueProperty().addListener((o, ov, nv) -> {
+            userAtBottom = nv.doubleValue() >= 0.98;
+        });
 
-        // ---------- Spinner animation ----------
-        spinnerTimeline = new Timeline(
+        // ---------- Slow, cheap spinner ----------
+        // Rotating just the label's rotateProperty — no CSS animation
+        Timeline spinnerTimeline = new Timeline(
                 new KeyFrame(Duration.ZERO,        new KeyValue(spinner.rotateProperty(), 0)),
-                new KeyFrame(Duration.seconds(1.4), new KeyValue(spinner.rotateProperty(), 360))
+                new KeyFrame(Duration.seconds(2.5), new KeyValue(spinner.rotateProperty(), 360))
         );
-        spinnerTimeline.setCycleCount(Animation.INDEFINITE);
+        spinnerTimeline.setCycleCount(Timeline.INDEFINITE);
         spinnerTimeline.play();
+
+        // ---------- Batch flush loop ----------
+        new AnimationTimer() {
+            @Override public void handle(long now) {
+                if (now - lastFlush < FLUSH_INTERVAL_NS) return;
+                lastFlush = now;
+                flushBatch();
+            }
+        }.start();
+    }
+
+    // ============================================================
+    //                     BATCH FLUSH
+    // ============================================================
+    private void flushBatch() {
+        if (pending.isEmpty()) return;
+
+        int budget = 25;             // max rows added per frame
+        boolean added = false;
+
+        while (budget-- > 0) {
+            Runnable r = pending.poll();
+            if (r == null) break;
+            r.run();                 // each runnable adds exactly 1 row
+            added = true;
+        }
+
+        // Trim old rows if needed
+        int size = messages.getChildren().size();
+        if (size > MAX_ROWS) {
+            messages.getChildren().remove(0, size - MAX_ROWS);
+        }
+
+        if (added && userAtBottom) {
+            // One deferred scroll — not a listener storm
+            Platform.runLater(() -> scroll.setVvalue(1.0));
+        }
     }
 
     // ============================================================
     //                     LOADING STATE
     // ============================================================
-    /** Show the loading bar + label with an indeterminate animation. */
     public void showLoading(String label) {
-        Platform.runLater(() -> {
+        Runnable r = () -> {
             loadingLabel.setText(label);
             loadingBar.setVisible(true);
             loadingBar.setManaged(true);
             loadingBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
-        });
+        };
+        if (Platform.isFxApplicationThread()) r.run();
+        else Platform.runLater(r);
     }
 
-    /** Hide the loading bar. */
     public void hideLoading() {
-        Platform.runLater(() -> {
+        Runnable r = () -> {
             loadingBar.setVisible(false);
             loadingBar.setManaged(false);
             loadingLabel.setText("");
-        });
+        };
+        if (Platform.isFxApplicationThread()) r.run();
+        else Platform.runLater(r);
     }
 
     // ============================================================
-    //                     MESSAGE APPEND
+    //                     APPEND
     // ============================================================
     public void append(Log.Level level, String msg) {
-        if (!Platform.isFxApplicationThread()) {
-            Platform.runLater(() -> append(level, msg));
-            return;
-        }
+        // Cheap: build a Runnable that will construct + add the row on FX thread
+        pending.offer(() -> messages.getChildren().add(buildRow(level, msg)));
+    }
 
+    private HBox buildRow(Log.Level level, String msg) {
         HBox row = new HBox(8);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("console-row");
@@ -133,67 +186,46 @@ public class ConsolePanel extends BorderPane {
 
         Label text = new Label(msg);
         text.getStyleClass().addAll("console-msg", "console-msg-" + level.name().toLowerCase());
-        text.setWrapText(true);
+        text.setWrapText(false);          // wrap=false is much cheaper
+        text.setMaxWidth(Double.MAX_VALUE);
 
         row.getChildren().addAll(icon, time, tag, text);
-
-        if (messages.getChildren().size() > MAX_ROWS) {
-            messages.getChildren().remove(0, messages.getChildren().size() - MAX_ROWS);
-        }
-        messages.getChildren().add(row);
-
-        // Fade + slide-in
-        row.setOpacity(0);
-        row.setTranslateX(-18);
-        FadeTransition ft = new FadeTransition(Duration.millis(220), row);
-        ft.setToValue(1);
-        TranslateTransition tt = new TranslateTransition(Duration.millis(220), row);
-        tt.setToX(0);
-        new ParallelTransition(ft, tt).play();
+        return row;
     }
 
     // ============================================================
-    //                     ANIMATED BANNER
+    //                     BANNER
     // ============================================================
     public void banner(String appName, String version) {
-        if (!Platform.isFxApplicationThread()) {
-            Platform.runLater(() -> banner(appName, version));
-            return;
-        }
+        Runnable r = () -> {
+            VBox card = new VBox(2);
+            card.getStyleClass().add("console-banner");
+            card.setPadding(new Insets(10, 4, 12, 4));
 
-        VBox card = new VBox(2);
-        card.getStyleClass().add("console-banner");
-        card.setPadding(new Insets(10, 4, 12, 4));
+            Label big = new Label("  ◆  " + appName + "  ◆");
+            big.getStyleClass().add("console-banner-title");
 
-        Label bigTitle = new Label("  ◆  " + appName + "  ◆");
-        bigTitle.getStyleClass().add("console-banner-title");
+            Label sub = new Label("  Image Processing Studio");
+            sub.getStyleClass().add("console-banner-sub");
 
-        Label sub = new Label("  Image Processing Studio");
-        sub.getStyleClass().add("console-banner-sub");
+            Label meta = new Label("  Version " + version
+                    + "   ·   JavaFX + SQLite + Gson + REST API");
+            meta.getStyleClass().add("console-banner-meta");
 
-        Label meta = new Label("  Version " + version
-                + "   ·   JavaFX + SQLite + Gson + REST API");
-        meta.getStyleClass().add("console-banner-meta");
+            card.getChildren().addAll(big, sub, meta);
+            messages.getChildren().add(card);
 
-        card.getChildren().addAll(bigTitle, sub, meta);
-        messages.getChildren().add(card);
+            if (userAtBottom) Platform.runLater(() -> scroll.setVvalue(1.0));
+        };
+        if (Platform.isFxApplicationThread()) r.run();
+        else Platform.runLater(r);
 
-        card.setOpacity(0);
-        card.setTranslateY(-12);
-        FadeTransition ft = new FadeTransition(Duration.millis(700), card);
-        ft.setToValue(1);
-        TranslateTransition tt = new TranslateTransition(Duration.millis(700), card);
-        tt.setToY(0);
-        tt.setInterpolator(Interpolator.EASE_OUT);
-        new ParallelTransition(ft, tt).play();
-
-        // Simulated "loading" progress for the startup greeting
+        // Short loading animation + greeting
         showLoading("Booting…");
         Timeline boot = new Timeline(
-                new KeyFrame(Duration.ZERO,             new KeyValue(loadingBar.progressProperty(), 0.0)),
-                new KeyFrame(Duration.millis(600),      new KeyValue(loadingBar.progressProperty(), 0.4)),
-                new KeyFrame(Duration.millis(1200),     new KeyValue(loadingBar.progressProperty(), 0.75)),
-                new KeyFrame(Duration.millis(1700),     new KeyValue(loadingBar.progressProperty(), 1.0))
+                new KeyFrame(Duration.ZERO,         new KeyValue(loadingBar.progressProperty(), 0.0)),
+                new KeyFrame(Duration.millis(500),  new KeyValue(loadingBar.progressProperty(), 0.5)),
+                new KeyFrame(Duration.millis(1000), new KeyValue(loadingBar.progressProperty(), 1.0))
         );
         boot.setOnFinished(e -> {
             hideLoading();
@@ -204,7 +236,12 @@ public class ConsolePanel extends BorderPane {
     }
 
     public void clear() {
-        messages.getChildren().clear();
+        Runnable r = () -> {
+            pending.clear();
+            messages.getChildren().clear();
+        };
+        if (Platform.isFxApplicationThread()) r.run();
+        else Platform.runLater(r);
     }
 
     private static String iconFor(Log.Level level) {

@@ -67,12 +67,14 @@
 
 .console-title {
     -fx-text-fill: #7fdbff;
+   
     -fx-font-weight: bold;
     -fx-font-size: 13px;
     -fx-font-family: "Menlo", "Consolas", monospace;
 }
 
 .console-spinner {
+   
     -fx-text-fill: #00e5ff;
     -fx-font-size: 16px;
 }

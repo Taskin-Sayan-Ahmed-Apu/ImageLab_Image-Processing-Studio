@@ -1,5 +1,4 @@
 package com.imagelab;
-
 import com.imagelab.data.AppConfig;
 import com.imagelab.data.ConfigLoader;
 import com.imagelab.ui.ConsolePanel;

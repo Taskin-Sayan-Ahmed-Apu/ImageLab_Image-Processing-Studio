@@ -50,7 +50,7 @@ public final class PPMHandler {
     }
 
     private static String token(InputStream in) throws IOException {
-        int c;
+        int c,pi;
         do {
             c = in.read();
             if (c == '#') while (c != '\n' && c != -1) c = in.read();

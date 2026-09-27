@@ -19,7 +19,8 @@ public final class ConfigLoader {
     private ConfigLoader() {}
 
     public static synchronized AppConfig get() {
-        if (cached != null) return cached;
+        if (cached != null) 
+            return cached;
         try (InputStream in = ConfigLoader.class.getResourceAsStream("/config.json")) {
             if (in == null) throw new IllegalStateException("config.json not found on classpath");
             cached = new Gson().fromJson(

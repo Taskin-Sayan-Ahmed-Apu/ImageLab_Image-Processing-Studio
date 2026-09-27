@@ -2,6 +2,7 @@ package com.imagelab.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
 import com.google.gson.reflect.TypeToken;
 
 import java.io.*;
@@ -22,6 +23,7 @@ public final class JsonHandler {
     public static List<HistoryEntry> importHistory(File file) throws IOException {
         try (Reader r = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
             Type type = new TypeToken<List<HistoryEntry>>() {}.getType();
+            
             return GSON.fromJson(r, type);
         }
     }

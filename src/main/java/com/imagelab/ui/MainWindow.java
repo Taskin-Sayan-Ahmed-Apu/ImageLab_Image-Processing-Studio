@@ -853,6 +853,7 @@ public class MainWindow {
         Log.kv("api.endpoint",  config.getApi().getRandomImageEndpoint());
         Log.kv("db.url",        config.getDatabase().getUrl());
         Log.divider();
+        
 
         Dialogs.info(
                 "config.json contents:\n\n" +

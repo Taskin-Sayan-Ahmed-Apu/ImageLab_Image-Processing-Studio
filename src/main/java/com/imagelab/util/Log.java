@@ -87,6 +87,7 @@ public final class Log {
     private static void emit(Level level, String msg) {
         printAnsi(level, msg);
         Sink s = uiSink;
+        
         if (s != null) s.accept(level, msg);
     }
 

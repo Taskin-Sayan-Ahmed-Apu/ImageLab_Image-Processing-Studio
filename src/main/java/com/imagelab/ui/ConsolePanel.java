@@ -235,7 +235,8 @@ public class ConsolePanel extends BorderPane {
         boot.play();
     }
 
-    public void clear() {
+    public void clear()
+    {
         Runnable r = () -> {
             pending.clear();
             messages.getChildren().clear();

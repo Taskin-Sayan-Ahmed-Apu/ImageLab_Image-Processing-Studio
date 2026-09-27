@@ -23,6 +23,7 @@ public final class Dialogs {
     public static Optional<String> prompt(String title, String message, String defaultValue) {
         TextInputDialog d = new TextInputDialog(defaultValue);
         d.setTitle(title);
+        
         d.setHeaderText(null);
         d.setContentText(message);
         return d.showAndWait();

@@ -3,6 +3,7 @@ package com.imagelab.data;
 import com.google.gson.Gson;
 
 import java.net.URI;
+
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -26,7 +27,7 @@ public final class ApiClient {
                 .GET().build();
         HttpResponse<String> resp = CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
         if (resp.statusCode() != 200)
-            throw new RuntimeException("API returned HTTP " + resp.statusCode());
+            throw new  RuntimeException("API  returned HTTP " + resp.statusCode());
         DogApiResponse parsed = GSON.fromJson(resp.body(), DogApiResponse.class);
         if (parsed == null || !parsed.isSuccess() || parsed.getMessage() == null)
             throw new RuntimeException("API response was not successful");

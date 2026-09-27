@@ -317,6 +317,7 @@ public final class ImageOps {
                 Math.max(0, p[1] - q[1]),
                 Math.max(0, p[2] - q[2])
         });
+        
     }
 
     public static BufferedImage add(BufferedImage a, BufferedImage b) {

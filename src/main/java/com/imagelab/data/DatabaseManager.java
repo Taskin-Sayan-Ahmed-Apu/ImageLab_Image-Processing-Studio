@@ -81,7 +81,8 @@ public class DatabaseManager {
              Statement st = conn.createStatement()) {
             st.executeUpdate("DELETE FROM history");
             Log.warn("History cleared");
-        } catch (SQLException e) {
+        }
+            catch (SQLException e) {
             Log.error("DB clear failed: " + e.getMessage());
         }
     }

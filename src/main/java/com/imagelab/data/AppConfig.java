@@ -41,6 +41,7 @@ public class AppConfig {
     }
 
     public static class Piecewise {
+        
         private int r1, s1, r2, s2;
         public int getR1() { return r1; }
         public int getS1() { return s1; }
@@ -57,6 +58,8 @@ public class AppConfig {
 
     public static class Database {
         private String url;
-        public String getUrl() { return url; }
+        
+        public String getUrl() { 
+            return url; }
     }
 }

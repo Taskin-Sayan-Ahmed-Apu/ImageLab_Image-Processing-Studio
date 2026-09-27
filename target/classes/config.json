@@ -19,4 +19,5 @@
   "database": {
     "url": "jdbc:sqlite:pixellab.db"
   }
+  
 }

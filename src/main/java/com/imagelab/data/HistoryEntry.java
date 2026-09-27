@@ -13,6 +13,7 @@ public class HistoryEntry {
         this.operation = operation;
         this.timestamp = timestamp;
         this.sourceImage = sourceImage;
+        
         this.details = details;
     }
 

@@ -48,6 +48,7 @@ public final class YUVHandler {
                     img.setRGB(x, y, (r << 16) | (g << 8) | b);
                 }
             }
+            
             return img;
         }
     }

@@ -1,4 +1,5 @@
 package com.imagelab;
+
 import com.imagelab.data.AppConfig;
 import com.imagelab.data.ConfigLoader;
 import com.imagelab.ui.ConsolePanel;
@@ -37,6 +38,7 @@ public class App extends Application {
 
         stage.setTitle(cfg.getAppName() + " — Image Processing Studio");
         stage.setScene(scene);
+        
         stage.setOnCloseRequest(e -> System.exit(0));
         stage.show();
 
